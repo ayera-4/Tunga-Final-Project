@@ -3,9 +3,10 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from .models import Notes, CustomUser
-from .serializers import NotesSerializer, UserRegistrationSerializer, UserLoginSerializer
+#from . serializers import NotesSerializer, UserRegistrationSerializer, UserLoginSerializer
+from . import serializers
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, update_session_auth_hash
 from django.core.exceptions import ObjectDoesNotExist
 
 # Create your views here.
@@ -23,18 +24,18 @@ def apiOverview(request):
 @api_view(['GET'])
 def noteList(request):
     notes = Notes.objects.all()
-    serializer = NotesSerializer(notes, many=True)
+    serializer = serializers.NotesSerializer(notes, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
 def noteView(request, pk):
     note = Notes.objects.get(id=pk)
-    serializer = NotesSerializer(note, many=False)
+    serializer = serializers.NotesSerializer(note, many=False)
     return Response(serializer.data)
 
 @api_view(['POST'])
 def noteAdd(request):
-    serializer = NotesSerializer(data=request.data)
+    serializer = serializers.NotesSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
     return Response(serializer.data)
@@ -42,7 +43,7 @@ def noteAdd(request):
 @api_view(['POST'])
 def noteUpdate(request, pk):
     note = Notes.objects.get(id=pk)
-    serializer = NotesSerializer(instance=note, data=request.data)
+    serializer = serializers.NotesSerializer(instance=note, data=request.data)
     if serializer.is_valid():
         serializer.save()
     return Response(serializer.data)
@@ -56,7 +57,7 @@ def noteDelete(request, pk):
 """@api_view(['POST'])
 def register_user(request):
     if request.method == 'POST':
-        serializer = UserRegistrationSerializer(data=request.data)
+        serializer = serializers.UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -64,7 +65,7 @@ def register_user(request):
 """
 class UserRegistrationView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
-    serializer_class = UserRegistrationSerializer
+    serializer_class = serializers.UserRegistrationSerializer
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -75,7 +76,7 @@ class UserRegistrationView(generics.CreateAPIView):
 
 class UserLoginView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
-    serializer_class = UserLoginSerializer
+    serializer_class = serializers.UserLoginSerializer
 
     def post(self, request, *args, **kwargs):
         data = request.data
@@ -106,3 +107,18 @@ class UserLogoutView(generics.CreateAPIView):
             return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ChangePasswordView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = serializers.ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user = request.user
+            if user.check_password(serializer.data.get('old_password')):
+                user.set_password(serializer.data.get('new_password'))
+                user.save()
+                update_session_auth_hash(request, user) #update session after password change
+                return Response({'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+            return Response({'error': 'Incorrect old password.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
