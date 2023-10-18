@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Notes, CustomUser
+from .models import Notes, CustomUser, Auth_token
 
 class NotesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,6 +17,12 @@ class UserLoginSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('email', 'password')
         extra_kwargs = {'password': {'write_only': True}}
+
+class UserLogoutSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Auth_token
+        fields = ('active_token',)
+
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)

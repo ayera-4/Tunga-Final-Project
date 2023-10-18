@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from .models import Notes, CustomUser
+from .models import Notes, CustomUser, Auth_token
 #from . serializers import NotesSerializer, UserRegistrationSerializer, UserLoginSerializer
 from . import serializers
 from rest_framework.authtoken.models import Token
@@ -99,8 +99,9 @@ class UserLoginView(generics.CreateAPIView):
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class UserLogoutView(generics.CreateAPIView):
+    #queryset = Auth_token.objects.all()
     permission_classes = [permissions.IsAuthenticated]
-
+    #serializer_class = serializers.UserLogoutSerializer
     def post(self, request, *args, **kwargs):
         try:
             request.user.auth_token.delete()
