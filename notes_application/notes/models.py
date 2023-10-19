@@ -21,3 +21,5 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
 
+class Auth_token(models.Model):
+    active_token = models.CharField(verbose_name="Active_token", max_length=255)
